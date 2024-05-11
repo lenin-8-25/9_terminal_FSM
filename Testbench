@@ -1,0 +1,65 @@
+module FSM_TB;
+
+
+reg clk;                
+reg reset;              
+reg qr_code_valid;      
+reg weight_detected;    
+reg passenger_passed;   
+
+
+wire [1:0] display_msg; 
+wire turnstile_ctrl;    
+wire error_indicator;
+
+
+TurnstileFSM uut (
+    .clk(clk),
+    .reset(reset),
+    .qr_code_valid(qr_code_valid),
+    .weight_detected(weight_detected),
+    .passenger_passed(passenger_passed),
+    .turnstile_ctrl(turnstile_ctrl),
+    .display_msg(display_msg),.error_indicator(error_indicator)
+);
+
+
+always begin
+    clk = 0;
+    #5;
+    clk = 1;
+    #5;
+end
+
+
+initial begin
+    
+    reset = 1;
+    qr_code_valid = 0;
+    weight_detected = 0;
+    passenger_passed = 0;
+    #50;
+
+    reset = 0;
+    qr_code_valid = 1;  
+    #20;
+
+    qr_code_valid = 0;
+    weight_detected = 1;  
+    #30;
+
+    passenger_passed = 1;  
+    #40;
+
+    qr_code_valid = 0;  
+    weight_detected = 0;
+    passenger_passed = 0;
+
+    qr_code_valid = 1;
+    #10;
+    qr_code_valid = 0;
+    
+    #50 $finish;
+end
+
+endmodule
