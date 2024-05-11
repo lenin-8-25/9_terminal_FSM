@@ -1,0 +1,92 @@
+Module:
+module TurnstileFSM (
+    input clk,
+    input reset,
+    input qr_code_valid,
+    input weight_detected,
+    input passenger_passed,
+    output reg turnstile_ctrl=0,
+    output reg  [1:0] display_msg,
+    output reg error_indicator=0
+);
+
+parameter Idle = 3'b000;
+parameter ValidatingTicket = 3'b001;
+parameter CheckingWeight = 3'b010;
+parameter OpeningTurnstile = 3'b011;
+parameter UserPassing = 3'b100;
+parameter ErrorState = 3'b101;
+parameter ClosingTurnstile = 3'b110;
+
+
+reg [2:0] current_state, next_state;
+
+
+always @(posedge clk or posedge reset) begin
+    if (reset) begin
+        current_state <= Idle;
+    end else begin
+        current_state <= next_state;
+    end
+end
+
+
+always @(current_state, qr_code_valid, weight_detected, passenger_passed) begin
+    case (current_state)
+        Idle:
+            if (qr_code_valid) begin
+                next_state = ValidatingTicket;
+            end else begin
+                next_state = Idle;
+            end
+        ValidatingTicket:
+            if (!qr_code_valid) begin
+                next_state = ErrorState;
+            end else begin
+                next_state = CheckingWeight;
+            end
+        CheckingWeight:
+            if (weight_detected) begin
+                next_state = OpeningTurnstile;
+            end else begin
+                next_state = ErrorState;
+            end
+        OpeningTurnstile:
+            begin
+                turnstile_ctrl = 1;
+                next_state = UserPassing;
+            end
+        UserPassing:
+            if (passenger_passed) begin
+                next_state = ClosingTurnstile;
+            end else begin
+                next_state = UserPassing;
+            end
+        ClosingTurnstile:
+            begin
+                turnstile_ctrl = 0;
+                next_state = Idle;
+            end
+        ErrorState:
+            begin
+                error_indicator = 1'b1;
+                display_msg = 2'b10;
+                if (qr_code_valid) begin
+                    next_state = ValidatingTicket;
+                end else begin
+                    next_state = Idle;
+                end
+            end
+        default: next_state = Idle;
+    endcase
+end
+
+always @(current_state) begin
+    case (current_state)
+        Idle, ClosingTurnstile: display_msg = 2'b00;
+        CheckingWeight, OpeningTurnstile, UserPassing: display_msg = 2'b01;
+        default: display_msg = 2'b10;
+    endcase
+end
+
+endmodule
